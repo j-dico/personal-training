@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sleep">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Sleep</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f5;
+    --muted: rgba(240,240,245,0.45);
+    --accent: #7b6ef6;
+    --accent-soft: rgba(123,110,246,0.15);
+    --success: #4ade80;
+    --warn: #fb923c;
+    --danger: #f87171;
+    --radius: 16px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    padding: calc(var(--safe-top) + 12px) 20px 12px;
+    gap: 4px;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+  }
+
+  nav button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+
+  nav button.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* SCREENS */
+  .screen { display: none; flex-direction: column; flex: 1; padding: 0 20px calc(var(--safe-bottom) + 24px); }
+  .screen.active { display: flex; }
+
+  /* SECTION LABELS */
+  .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 28px 0 10px;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .card-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-row:last-child { border-bottom: none; }
+
+  .card-row-label {
+    font-size: 15px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .card-row-value {
+    font-size: 15px;
+    color: var(--muted);
+  }
+
+  /* SLEEP DURATION PICKER */
+  .sleep-display {
+    text-align: center;
+    padding: 36px 20px 24px;
+  }
+
+  .sleep-hours {
+    font-size: 72px;
+    font-weight: 200;
+    letter-spacing: -3px;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sleep-unit {
+    font-size: 20px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .sleep-quality {
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .sleep-quality.great { color: var(--success); }
+  .sleep-quality.ok { color: #facc15; }
+  .sleep-quality.poor { color: var(--warn); }
+  .sleep-quality.bad { color: var(--danger); }
+
+  /* SLIDER */
+  .slider-wrap { padding: 0 20px 8px; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface2);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+
+  /* TIME INPUTS */
+  .time-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .time-input-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .time-input-wrap label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .time-input-wrap input[type=time] {
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text);
+    width: 100%;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+    color-scheme: dark;
+  }
+
+  /* SYMPTOM CHIPS */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    padding: 7px 14px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .chip.selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* NOTE INPUT */
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 15px;
+    padding: 14px 16px;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    min-height: 80px;
+    margin-top: 8px;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+  textarea:focus { border-color: var(--accent); }
+
+  /* DATE PICKER */
+  input[type=date] {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    color-scheme: dark;
+    cursor: pointer;
+  }
+
+  /* SAVE BUTTON */
+  .btn-save {
+    margin-top: 24px;
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-save:active { opacity: 0.85; transform: scale(0.99); }
+
+  /* LOG LIST */
+  .log-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .log-entry-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .log-date {
+    flex: 1;
+  }
+
+  .log-date-main {
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .log-date-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .log-hours-badge {
+    font-size: 22px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+
+  .log-hours-badge.great { color: var(--success); }
+  .log-hours-badge.ok { color: #facc15; }
+  .log-hours-badge.poor { color: var(--warn); }
+  .log-hours-badge.bad { color: var(--danger); }
+
+  .log-detail {
+    padding: 0 16px 14px;
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .log-detail.open { display: block; }
+
+  .log-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-detail-row:last-child { border-bottom: none; }
+
+  .log-detail-row span:first-child { color: var(--muted); }
+
+  .log-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 4px;
+  }
+
+  .log-chip {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* EXPORT */
+  .btn-export {
+    margin-top: 16px;
+    width: 100%;
+    padding: 14px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-export:active { background: var(--surface2); }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; line-height: 1.5; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 24px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <button class="active" onclick="showScreen('log')">Log sleep</button>
+  <button onclick="showScreen('symptoms')">Symptoms</button>
+  <button onclick="showScreen('history')">History</button>
+</nav>
+
+<!-- LOG SLEEP -->
+<div class="screen active" id="screen-log">
+
+  <div class="sleep-display">
+    <div>
+      <span class="sleep-hours" id="hours-display">7.5</span><span class="sleep-unit">h</span>
+    </div>
+    <div class="sleep-quality ok" id="quality-label">Decent</div>
+  </div>
+
+  <div class="slider-wrap">
+    <input type="range" id="sleep-slider" min="0" max="12" step="0.5" value="7.5"
+      oninput="updateSleepDisplay(this.value)">
+  </div>
+
+  <p class="label">Date</p>
+  <div class="card">
+    <div class="card-row">
+      <span class="card-row-label">Night of</span>
+      <input type="date" id="sleep-date">
+    </div>
+  </div>
+
+  <p class="label">Bedtime & wake</p>
+  <div class="time-row">
+    <div class="time-input-wrap">
+      <label>Bedtime</label>
+      <input type="time" id="bed-time" value="23:00">
+    </div>
+    <div class="time-input-wrap">
+      <label>Wake</label>
+      <input type="time" id="wake-time" value="06:30">
+    </div>
+  </div>
+
+  <p class="label">Notes</p>
+  <textarea id="sleep-note" placeholder="Anything to remember about last night…" rows="2"></textarea>
+
+  <button class="btn-save" onclick="saveSleep()">Save night</button>
+</div>
+
+<!-- SYMPTOMS -->
+<div class="screen" id="screen-symptoms">
+
+  <p class="label">Date</p>
+  <div class="card">
+    <div class="card-row">
+      <span class="card-row-label">Feeling on</span>
+      <input type="date" id="symptom-date">
+    </div>
+  </div>
+
+  <p class="label">How you felt today</p>
+  <div class="chips" id="symptom-chips">
+    <div class="chip" onclick="toggleChip(this)">Tired</div>
+    <div class="chip" onclick="toggleChip(this)">Groggy</div>
+    <div class="chip" onclick="toggleChip(this)">Headache</div>
+    <div class="chip" onclick="toggleChip(this)">Anxious</div>
+    <div class="chip" onclick="toggleChip(this)">Irritable</div>
+    <div class="chip" onclick="toggleChip(this)">Low focus</div>
+    <div class="chip" onclick="toggleChip(this)">Energetic</div>
+    <div class="chip" onclick="toggleChip(this)">Sharp</div>
+    <div class="chip" onclick="toggleChip(this)">Calm</div>
+    <div class="chip" onclick="toggleChip(this)">Motivated</div>
+    <div class="chip" onclick="toggleChip(this)">Brain fog</div>
+    <div class="chip" onclick="toggleChip(this)">Restless</div>
+  </div>
+
+  <p class="label">Notes</p>
+  <textarea id="symptom-note" placeholder="How did the day actually go…" rows="2"></textarea>
+
+  <button class="btn-save" onclick="saveSymptoms()">Save symptoms</button>
+</div>
+
+<!-- HISTORY -->
+<div class="screen" id="screen-history">
+
+  <div id="stats-section" style="display:none">
+    <p class="label">Last 7 nights</p>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-avg">—</div>
+        <div class="stat-label">Avg hrs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-best">—</div>
+        <div class="stat-label">Best</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-worst">—</div>
+        <div class="stat-label">Worst</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="label">All entries</p>
+  <div id="log-list"></div>
+
+  <button class="btn-export" onclick="exportData()" id="export-btn" style="display:none">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+    Copy all data
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SYMPTOMS_KEY = 'sleep_symptoms';
+const SLEEP_KEY = 'sleep_entries';
+
+function getData(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+
+function saveData(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatDate(d) {
+  const date = new Date(d + 'T12:00:00');
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function qualityClass(h) {
+  if (h >= 7.5) return 'great';
+  if (h >= 6.5) return 'ok';
+  if (h >= 5) return 'poor';
+  return 'bad';
+}
+
+function qualityLabel(h) {
+  if (h >= 7.5) return 'Great';
+  if (h >= 6.5) return 'Decent';
+  if (h >= 5) return 'Short';
+  return 'Very short';
+}
+
+function updateSleepDisplay(val) {
+  const h = parseFloat(val);
+  document.getElementById('hours-display').textContent = h % 1 === 0 ? h + '.0' : h;
+  const ql = document.getElementById('quality-label');
+  ql.className = 'sleep-quality ' + qualityClass(h);
+  ql.textContent = qualityLabel(h);
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+function toggleChip(el) {
+  el.classList.toggle('selected');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function saveSleep() {
+  const date = document.getElementById('sleep-date').value;
+  const hours = parseFloat(document.getElementById('sleep-slider').value);
+  const bed = document.getElementById('bed-time').value;
+  const wake = document.getElementById('wake-time').value;
+  const note = document.getElementById('sleep-note').value.trim();
+
+  if (!date) { toast('Pick a date first'); return; }
+
+  const entries = getData(SLEEP_KEY);
+  const idx = entries.findIndex(e => e.date === date);
+  const entry = { date, hours, bed, wake, note };
+
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+
+  entries.sort((a, b) => b.date.localeCompare(a.date));
+  saveData(SLEEP_KEY, entries);
+  document.getElementById('sleep-note').value = '';
+  toast('Night saved');
+}
+
+function saveSymptoms() {
+  const date = document.getElementById('symptom-date').value;
+  const selected = [...document.querySelectorAll('#symptom-chips .chip.selected')].map(c => c.textContent);
+  const note = document.getElementById('symptom-note').value.trim();
+
+  if (!date) { toast('Pick a date first'); return; }
+
+  const entries = getData(SYMPTOMS_KEY);
+  const idx = entries.findIndex(e => e.date === date);
+  const entry = { date, symptoms: selected, note };
+
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+
+  saveData(SYMPTOMS_KEY, entries);
+  document.querySelectorAll('#symptom-chips .chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('symptom-note').value = '';
+  toast('Symptoms saved');
+}
+
+function renderHistory() {
+  const sleepData = getData(SLEEP_KEY);
+  const symData = getData(SYMPTOMS_KEY);
+  const list = document.getElementById('log-list');
+  const exportBtn = document.getElementById('export-btn');
+  const statsSection = document.getElementById('stats-section');
+
+  if (sleepData.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🌙</div><div class="empty-text">No entries yet.<br>Log your first night to get started.</div></div>';
+    exportBtn.style.display = 'none';
+    statsSection.style.display = 'none';
+    return;
+  }
+
+  exportBtn.style.display = 'flex';
+
+  // Stats
+  const recent = sleepData.slice(0, 7);
+  const avg = recent.reduce((s, e) => s + e.hours, 0) / recent.length;
+  const best = Math.max(...recent.map(e => e.hours));
+  const worst = Math.min(...recent.map(e => e.hours));
+  document.getElementById('stat-avg').textContent = avg.toFixed(1);
+  document.getElementById('stat-best').textContent = best.toFixed(1);
+  document.getElementById('stat-worst').textContent = worst.toFixed(1);
+  statsSection.style.display = 'block';
+
+  // Build merged list
+  const allDates = [...new Set([...sleepData.map(e => e.date), ...symData.map(e => e.date)])].sort((a, b) => b.localeCompare(a));
+
+  list.innerHTML = allDates.map(date => {
+    const sleep = sleepData.find(e => e.date === date);
+    const sym = symData.find(e => e.date === date);
+    const qc = sleep ? qualityClass(sleep.hours) : '';
+    const id = 'detail-' + date;
+
+    return `<div class="log-entry">
+      <div class="log-entry-header" onclick="toggleDetail('${id}')">
+        <div class="log-date">
+          <div class="log-date-main">${formatDate(date)}</div>
+          <div class="log-date-sub">${sleep ? `Bed ${sleep.bed} · Wake ${sleep.wake}` : sym ? 'Symptoms only' : ''}</div>
+        </div>
+        ${sleep ? `<div class="log-hours-badge ${qc}">${sleep.hours}h</div>` : ''}
+      </div>
+      <div class="log-detail" id="${id}">
+        ${sleep && sleep.note ? `<div class="log-detail-row"><span>Sleep note</span><span style="max-width:200px;text-align:right;color:var(--text)">${sleep.note}</span></div>` : ''}
+        ${sym && sym.symptoms.length ? `<div class="log-detail-row"><span>Symptoms</span><div class="log-chips">${sym.symptoms.map(s => `<span class="log-chip">${s}</span>`).join('')}</div></div>` : ''}
+        ${sym && sym.note ? `<div class="log-detail-row"><span>Day note</span><span style="max-width:200px;text-align:right;color:var(--text)">${sym.note}</span></div>` : ''}
+        ${!sleep?.note && !sym?.symptoms?.length && !sym?.note ? '<div style="padding:8px 0;font-size:14px;color:var(--muted)">No notes recorded.</div>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDetail(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+function exportData() {
+  const sleepData = getData(SLEEP_KEY);
+  const symData = getData(SYMPTOMS_KEY);
+
+  if (!sleepData.length) { toast('Nothing to export yet'); return; }
+
+  const allDates = [...new Set([...sleepData.map(e => e.date), ...symData.map(e => e.date)])].sort((a, b) => b.localeCompare(a));
+
+  const lines = ['Sleep Tracker Export', '===================', ''];
+
+  allDates.forEach(date => {
+    const sleep = sleepData.find(e => e.date === date);
+    const sym = symData.find(e => e.date === date);
+    lines.push(formatDate(date));
+    if (sleep) {
+      lines.push(`  Sleep: ${sleep.hours}h  (Bed ${sleep.bed} · Wake ${sleep.wake})`);
+      if (sleep.note) lines.push(`  Note: ${sleep.note}`);
+    }
+    if (sym) {
+      if (sym.symptoms.length) lines.push(`  Symptoms: ${sym.symptoms.join(', ')}`);
+      if (sym.note) lines.push(`  Day note: ${sym.note}`);
+    }
+    lines.push('');
+  });
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard'));
+}
+
+// Init dates
+document.getElementById('sleep-date').value = today();
+document.getElementById('symptom-date').value = today();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(() => {});
+}
+</script>
+</body>
+</html>
